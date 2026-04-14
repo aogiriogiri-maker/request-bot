@@ -38,7 +38,8 @@ client.once('ready', async () => {
 
     const embed = new EmbedBuilder()
         .setColor('#2b2d31')
-        .setImage('https://imgur.com/a/Etbe5xX') // ВСТАВЬ СВОЮ ССЫЛКУ
+        // ❌ убрал краш:
+        // .setImage('https://imgur.com/a/Etbe5xX')
         .setDescription(`
 👋 **Путь в семью Kamatoz начинается здесь!**
 
@@ -110,62 +111,66 @@ client.on(Events.InteractionCreate, async interaction => {
 
     if (interaction.customId === 'form') {
 
-        const panelChannel = await client.channels.fetch(CHANNEL_ID);
-const category = panelChannel.parent;
+        await interaction.deferReply({ ephemeral: true });
 
-        const newChannel = await interaction.guild.channels.create({
-            name: `заявка-${interaction.user.username}`,
-            type: ChannelType.GuildText,
-            parent: category.id,
+        try {
+            const panelChannel = await client.channels.fetch(CHANNEL_ID);
+            const category = panelChannel.parentId;
 
-            permissionOverwrites: [
-                {
-                    id: interaction.guild.id,
-                    deny: ['ViewChannel'],
-                },
-                {
-                    id: interaction.user.id,
-                    allow: ['ViewChannel', 'SendMessages'],
-                },
-                ...ROLES.map(roleId => ({
-                    id: roleId,
-                    allow: ['ViewChannel', 'SendMessages']
-                }))
-            ]
-        });
+            const newChannel = await interaction.guild.channels.create({
+                name: `заявка-${interaction.user.username}`,
+                type: ChannelType.GuildText,
+                parent: category || null, // ✅ фикс
 
-        const embed = new EmbedBuilder()
-            .setTitle('📥 Новая заявка')
-            .addFields(
-                { name: 'Имя', value: interaction.fields.getTextInputValue('name') },
-                { name: 'Возраст', value: interaction.fields.getTextInputValue('age') },
-                { name: 'Ник', value: interaction.fields.getTextInputValue('nick') },
-                { name: 'История', value: interaction.fields.getTextInputValue('history') },
-                { name: 'Видео', value: interaction.fields.getTextInputValue('video') }
-            );
+                permissionOverwrites: [
+                    {
+                        id: interaction.guild.id,
+                        deny: ['ViewChannel'],
+                    },
+                    {
+                        id: interaction.user.id,
+                        allow: ['ViewChannel', 'SendMessages'],
+                    },
+                    ...ROLES.map(roleId => ({
+                        id: roleId,
+                        allow: ['ViewChannel', 'SendMessages']
+                    }))
+                ]
+            });
 
-        const accept = new ButtonBuilder()
-            .setCustomId(`accept_${interaction.user.id}`)
-            .setLabel('Принять')
-            .setStyle(ButtonStyle.Success);
+            const embed = new EmbedBuilder()
+                .setTitle('📥 Новая заявка')
+                .addFields(
+                    { name: 'Имя', value: interaction.fields.getTextInputValue('name') },
+                    { name: 'Возраст', value: interaction.fields.getTextInputValue('age') },
+                    { name: 'Ник', value: interaction.fields.getTextInputValue('nick') },
+                    { name: 'История', value: interaction.fields.getTextInputValue('history') },
+                    { name: 'Видео', value: interaction.fields.getTextInputValue('video') }
+                );
 
-        const deny = new ButtonBuilder()
-            .setCustomId(`deny_${interaction.user.id}`)
-            .setLabel('Отклонить')
-            .setStyle(ButtonStyle.Danger);
+            const accept = new ButtonBuilder()
+                .setCustomId(`accept_${interaction.user.id}`)
+                .setLabel('Принять')
+                .setStyle(ButtonStyle.Success);
 
-        const row = new ActionRowBuilder().addComponents(accept, deny);
+            const deny = new ButtonBuilder()
+                .setCustomId(`deny_${interaction.user.id}`)
+                .setLabel('Отклонить')
+                .setStyle(ButtonStyle.Danger);
 
-        await newChannel.send({
-            content: `<@${interaction.user.id}>`,
-            embeds: [embed],
-            components: [row]
-        });
+            const row = new ActionRowBuilder().addComponents(accept, deny);
 
-        await interaction.reply({
-            content: '✅ Заявка отправлена!',
-            ephemeral: true
-        });
+            await newChannel.send({
+                content: `<@${interaction.user.id}>`,
+                embeds: [embed],
+                components: [row]
+            });
+
+            await interaction.editReply('✅ Заявка отправлена!');
+        } catch (err) {
+            console.error(err);
+            await interaction.editReply('❌ Ошибка при создании заявки');
+        }
     }
 });
 
