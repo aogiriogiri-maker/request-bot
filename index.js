@@ -39,7 +39,7 @@ client.once('ready', async () => {
 
     const embed = new EmbedBuilder()
     .setColor('#2b2d31')
-    .setImage('ССЫЛКА_НА_ТВОЁ_ЛОГО') // ← сюда вставь лого Kamatoz
+    .setImage('https://ibb.co/HTcgyGGc') // ← сюда вставь лого Kamatoz
 
     .setDescription(`
 👋 **Путь в семью Kamatoz начинается здесь!**
