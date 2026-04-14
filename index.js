@@ -13,27 +13,32 @@ const {
 } = require('discord.js');
 
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages
-    ]
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
 });
 
 const TOKEN = process.env.TOKEN;
 
 const CHANNEL_ID = '1493650682782285864';
-const LOG_CHANNEL_ID = '1470242269696233596';
-const RECRUITER_ROLE = '1493716953028624424';
 
-// роли доступа в заявку
+// роли (кто видит заявки)
 const ROLES = [
-    '1493716953028624424',
+    '1493658504538624111',
+    '1493658601347223762',
+    '1493658647958392912',
+    '1493658676148306072'
 ];
 
+// роль при принятии
 const ROLE_ACCEPT = '1493658902385131531';
 
-const acceptedStats = {};
+// роль рекрут (кого тегать)
+const RECRUIT_ROLE = 'ВСТАВЬ_ID_РЕКРУТА';
+
+// лог канал
+const LOG_CHANNEL_ID = 'ВСТАВЬ_ID_ЛОГ_КАНАЛА';
+
+// счетчик
+const stats = {};
 
 // ---------- ПАНЕЛЬ ----------
 client.once('ready', async () => {
@@ -41,7 +46,7 @@ client.once('ready', async () => {
 
     const channel = await client.channels.fetch(CHANNEL_ID);
 
-    const embed = new EmbedBuilder()
+        const embed = new EmbedBuilder()
         .setColor('#2b2d31')
         .setDescription(`👋 **Путь в семью Kamatoz начинается здесь!**
         
@@ -113,67 +118,72 @@ client.on(Events.InteractionCreate, async interaction => {
 // ---------- ОТПРАВКА ----------
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isModalSubmit()) return;
+    if (interaction.customId !== 'form') return;
 
-    if (interaction.customId === 'form') {
+    try {
+        const panelChannel = await client.channels.fetch(CHANNEL_ID);
+        const category = panelChannel.parent;
 
-        await interaction.deferReply({ ephemeral: true });
+        const newChannel = await interaction.guild.channels.create({
+            name: `заявка-${interaction.user.username}`,
+            type: ChannelType.GuildText,
+            parent: category.id,
 
-        try {
-            const newChannel = await interaction.guild.channels.create({
-                name: `заявка-${interaction.user.username}`,
-                type: ChannelType.GuildText,
+            permissionOverwrites: [
+                {
+                    id: interaction.guild.id,
+                    deny: ['ViewChannel'],
+                },
+                {
+                    id: interaction.user.id,
+                    allow: ['ViewChannel', 'SendMessages', 'ReadMessageHistory'],
+                },
+                ...ROLES.map(roleId => ({
+                    id: roleId,
+                    allow: ['ViewChannel', 'SendMessages', 'ReadMessageHistory']
+                }))
+            ]
+        });
 
-                permissionOverwrites: [
-                    {
-                        id: interaction.guild.id,
-                        deny: ['ViewChannel'],
-                    },
-                    {
-                        id: interaction.user.id,
-                        allow: ['ViewChannel', 'SendMessages'],
-                    },
-                    ...ROLES.map(roleId => ({
-                        id: roleId,
-                        allow: ['ViewChannel', 'SendMessages']
-                    }))
-                ]
-            });
+        const embed = new EmbedBuilder()
+            .setTitle('📥 Новая заявка')
+            .addFields(
+                { name: 'Имя', value: interaction.fields.getTextInputValue('name') },
+                { name: 'Возраст', value: interaction.fields.getTextInputValue('age') },
+                { name: 'Ник', value: interaction.fields.getTextInputValue('nick') },
+                { name: 'История', value: interaction.fields.getTextInputValue('history') },
+                { name: 'Видео', value: interaction.fields.getTextInputValue('video') }
+            );
 
-            const embed = new EmbedBuilder()
-                .setTitle('📥 Новая заявка')
-                .addFields(
-                    { name: 'Имя', value: interaction.fields.getTextInputValue('name') },
-                    { name: 'Возраст', value: interaction.fields.getTextInputValue('age') },
-                    { name: 'Ник', value: interaction.fields.getTextInputValue('nick') },
-                    { name: 'История', value: interaction.fields.getTextInputValue('history') },
-                    { name: 'Видео', value: interaction.fields.getTextInputValue('video') }
-                );
+        const accept = new ButtonBuilder()
+            .setCustomId(`accept_${interaction.user.id}`)
+            .setLabel('Принять')
+            .setStyle(ButtonStyle.Success);
 
-            const accept = new ButtonBuilder()
-                .setCustomId(`accept_${interaction.user.id}`)
-                .setLabel('Принять')
-                .setStyle(ButtonStyle.Success);
+        const deny = new ButtonBuilder()
+            .setCustomId(`deny_${interaction.user.id}`)
+            .setLabel('Отклонить')
+            .setStyle(ButtonStyle.Danger);
 
-            const deny = new ButtonBuilder()
-                .setCustomId(`deny_${interaction.user.id}`)
-                .setLabel('Отклонить')
-                .setStyle(ButtonStyle.Danger);
+        const row = new ActionRowBuilder().addComponents(accept, deny);
 
-            const row = new ActionRowBuilder().addComponents(accept, deny);
+        await newChannel.send({
+            content: `<@&${RECRUIT_ROLE}> <@${interaction.user.id}>`,
+            embeds: [embed],
+            components: [row]
+        });
 
-            const rolesPing = ROLES.map(id => `<@&${id}>`).join(' ');
+        await interaction.reply({
+            content: '✅ Заявка отправлена!',
+            ephemeral: true
+        });
 
-            await newChannel.send({
-                content: `<@&${RECRUITER_ROLE}>\n${rolesPing}\n<@${interaction.user.id}>`,
-                embeds: [embed],
-                components: [row]
-            });
-
-            await interaction.editReply('✅ Заявка отправлена!');
-        } catch (err) {
-            console.error(err);
-            await interaction.editReply(`❌ Ошибка: ${err.message}`);
-        }
+    } catch (err) {
+        console.error(err);
+        await interaction.reply({
+            content: '❌ Ошибка при создании заявки',
+            ephemeral: true
+        });
     }
 });
 
@@ -181,53 +191,47 @@ client.on(Events.InteractionCreate, async interaction => {
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isButton()) return;
 
-    const member = interaction.member;
-
-    // 🚫 только рекрут
-    if (!member.roles.cache.has(RECRUITER_ROLE)) {
-        return interaction.reply({
-            content: '❌ У тебя нет доступа',
-            ephemeral: true
-        });
-    }
-
-    // 🚫 нельзя принять свою
-    const userId = interaction.customId.split('_')[1];
-    if (interaction.user.id === userId) {
-        return interaction.reply({
-            content: '❌ Нельзя принять свою заявку',
-            ephemeral: true
-        });
-    }
-
-    // ПРИНЯТЬ
     if (interaction.customId.startsWith('accept_')) {
+        const userId = interaction.customId.split('_')[1];
 
-        const target = await interaction.guild.members.fetch(userId);
-        await target.roles.add(ROLE_ACCEPT);
-
-        if (!acceptedStats[interaction.user.id]) {
-            acceptedStats[interaction.user.id] = 0;
+        // нельзя принять свою заявку
+        if (interaction.user.id === userId) {
+            return interaction.reply({
+                content: '❌ Нельзя принять свою заявку',
+                ephemeral: true
+            });
         }
-        acceptedStats[interaction.user.id]++;
 
-        const logChannel = await interaction.guild.channels.fetch(LOG_CHANNEL_ID);
+        const member = await interaction.guild.members.fetch(userId);
+        await member.roles.add(ROLE_ACCEPT);
 
-        await logChannel.send({
-            content: `✅ Принят\n👤 <@${userId}>\n🛠 <@${interaction.user.id}>\n📊 Всего: ${acceptedStats[interaction.user.id]}`
-        });
+        // статистика
+        stats[interaction.user.id] = (stats[interaction.user.id] || 0) + 1;
+
+        const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
+
+        await logChannel.send(
+            `✅ <@${interaction.user.id}> принял <@${userId}> | Всего: ${stats[interaction.user.id]}`
+        );
 
         await interaction.reply('✅ Принят');
     }
 
-    // ОТКЛОН
     if (interaction.customId.startsWith('deny_')) {
+        const userId = interaction.customId.split('_')[1];
 
-        const logChannel = await interaction.guild.channels.fetch(LOG_CHANNEL_ID);
+        if (interaction.user.id === userId) {
+            return interaction.reply({
+                content: '❌ Нельзя отклонить свою заявку',
+                ephemeral: true
+            });
+        }
 
-        await logChannel.send({
-            content: `❌ Отклонён\n👤 <@${userId}>\n🛠 <@${interaction.user.id}>`
-        });
+        const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
+
+        await logChannel.send(
+            `❌ <@${interaction.user.id}> отклонил <@${userId}>`
+        );
 
         await interaction.reply('❌ Отклонён');
     }
