@@ -32,7 +32,7 @@ const ROLES = [
 const ROLE_ACCEPT = '1493658902385131531';
 
 // роль рекрут (кого тегать)
-const RECRUIT_ROLE = 'ВСТАВЬ_ID_РЕКРУТА';
+const RECRUIT_ROLE = '1493716953028624424';
 
 // лог канал
 const LOG_CHANNEL_ID = 'ВСТАВЬ_ID_ЛОГ_КАНАЛА';
