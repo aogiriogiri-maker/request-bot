@@ -118,9 +118,28 @@ client.on(Events.InteractionCreate, async interaction => {
 
         const channel = await client.channels.fetch(CHANNEL_ID);
 
-        const thread = await channel.threads.create({
-            name: `Заявка ${interaction.user.username}`,
-            autoArchiveDuration: 1440,
+        const category = interaction.channel.parent;
+
+const newChannel = await interaction.guild.channels.create({
+    name: `заявка-${interaction.user.username}`,
+    type: 0,
+    parent: category.id,
+
+    permissionOverwrites: [
+        {
+            id: interaction.guild.id,
+            deny: ['ViewChannel'],
+        },
+        {
+            id: interaction.user.id,
+            allow: ['ViewChannel', 'SendMessages'],
+        },
+        ...ROLES.map(roleId => ({
+            id: roleId,
+            allow: ['ViewChannel', 'SendMessages']
+        }))
+    ]
+});
             type: ChannelType.PublicThread
         });
 
