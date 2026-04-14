@@ -50,10 +50,6 @@ client.once('ready', async () => {
 Прочитайте ВСЕ ВОПРОСЫ.
 Если не ответили — ЗАЯВКА ОТКЛОНЯЕТСЯ.
 ЗАЯВКИ только на сервер Orlando (18)
-**Требования**
-Возраст - 15+
-Иметь среднюю стрельбу с тяжки и сайги
-Быть адекватным
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -94,17 +90,17 @@ client.on(Events.InteractionCreate, async interaction => {
                 new TextInputBuilder().setCustomId('nick').setLabel('Игровой ник').setStyle(TextInputStyle.Short)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('history').setLabel('История семей и почему ушел').setStyle(TextInputStyle.Paragraph)
+                new TextInputBuilder().setCustomId('history').setLabel('История семей').setStyle(TextInputStyle.Paragraph)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('video').setLabel('Откаты с гг спеш+сайга').setStyle(TextInputStyle.Paragraph)
+                new TextInputBuilder().setCustomId('video').setLabel('Видео').setStyle(TextInputStyle.Paragraph)
             )
         );
 
         return interaction.showModal(modal);
     }
 
-    // ---------- СОЗДАНИЕ ЗАЯВКИ ----------
+    // ---------- СОЗДАНИЕ ----------
     if (interaction.isModalSubmit() && interaction.customId === 'form') {
         try {
             const panelChannel = await client.channels.fetch(CHANNEL_ID);
@@ -140,27 +136,12 @@ client.on(Events.InteractionCreate, async interaction => {
                     { name: 'Видео', value: interaction.fields.getTextInputValue('video') }
                 );
 
-            const accept = new ButtonBuilder()
-                .setCustomId(`accept_${interaction.user.id}`)
-                .setLabel('Принять')
-                .setStyle(ButtonStyle.Success);
-
-            const deny = new ButtonBuilder()
-                .setCustomId(`deny_${interaction.user.id}`)
-                .setLabel('Отклонить')
-                .setStyle(ButtonStyle.Danger);
-
-            const call = new ButtonBuilder()
-                .setCustomId(`call_${interaction.user.id}`)
-                .setLabel('Вызвать на обзвон')
-                .setStyle(ButtonStyle.Secondary);
-
-            const take = new ButtonBuilder()
-                .setCustomId(`take_${interaction.user.id}`)
-                .setLabel('Взять заявку')
-                .setStyle(ButtonStyle.Primary);
-
-            const row = new ActionRowBuilder().addComponents(accept, deny, call, take);
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`accept_${interaction.user.id}`).setLabel('Принять').setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId(`deny_${interaction.user.id}`).setLabel('Отклонить').setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId(`call_${interaction.user.id}`).setLabel('Вызвать').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId(`take_${interaction.user.id}`).setLabel('Взять').setStyle(ButtonStyle.Primary)
+            );
 
             await newChannel.send({
                 content: `<@&${RECRUIT_ROLE}> <@${interaction.user.id}>`,
@@ -168,67 +149,39 @@ client.on(Events.InteractionCreate, async interaction => {
                 components: [row]
             });
 
-            return interaction.reply({
-                content: '✅ Заявка отправлена!',
-                ephemeral: true
-            });
+            return interaction.reply({ content: '✅ Заявка отправлена!', ephemeral: true });
 
         } catch (err) {
             console.error(err);
-            return interaction.reply({
-                content: '❌ Ошибка при создании заявки',
-                ephemeral: true
-            });
+            return interaction.reply({ content: '❌ Ошибка', ephemeral: true });
         }
     }
 
     // ---------- КНОПКИ ----------
-    if (interaction.isButton()) {
+    if (!interaction.isButton()) return;
 
     const userId = interaction.customId.split('_')[1];
 
-    // ❌ нельзя свою заявку
     if (interaction.user.id === userId) {
-        return interaction.reply({
-            content: '❌ Нет доступа',
-            ephemeral: true
-        });
+        return interaction.reply({ content: '❌ Нет доступа', ephemeral: true });
     }
 
-    // 🧾 ВЗЯТЬ
     if (interaction.customId.startsWith('take_')) {
 
         if (!interaction.member.roles.cache.has(RECRUIT_ROLE)) {
-            return interaction.reply({
-                content: '❌ Только для рекрутов',
-                ephemeral: true
-            });
+            return interaction.reply({ content: '❌ Только рекрут', ephemeral: true });
         }
 
-        await interaction.channel.send(
-            `🧾 <@${interaction.user.id}> взял заявку`
-        );
-
-        return interaction.reply({
-            content: '✅ Ты взял заявку',
-            ephemeral: true
-        });
+        await interaction.channel.send(`🧾 <@${interaction.user.id}> взял заявку`);
+        return interaction.reply({ content: '✅ Взял', ephemeral: true });
     }
 
-    // 📞 ОБЗВОН
     if (interaction.customId.startsWith('call_')) {
 
-        await interaction.channel.send(
-            `📞 <@${userId}> Вас вызвали на обзвон, зайдите в любой войс`
-        );
-
-        return interaction.reply({
-            content: '📞 Вызов отправлен',
-            ephemeral: true
-        });
+        await interaction.channel.send(`📞 <@${userId}> зайди в войс`);
+        return interaction.reply({ content: '📞 Отправлено', ephemeral: true });
     }
 
-    // ✅ ПРИНЯТЬ
     if (interaction.customId.startsWith('accept_')) {
 
         const member = await interaction.guild.members.fetch(userId);
@@ -238,69 +191,24 @@ client.on(Events.InteractionCreate, async interaction => {
 
         const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
 
-        await logChannel.send(
-            `✅ <@${interaction.user.id}> принял <@${userId}> | Всего: ${stats[interaction.user.id]}`
-        );
+        await logChannel.send(`✅ <@${interaction.user.id}> принял <@${userId}> | ${stats[interaction.user.id]}`);
 
         await interaction.reply('✅ Принят');
 
-        setTimeout(() => {
-            interaction.channel.delete().catch(() => {});
-        }, 10000);
-
+        setTimeout(() => interaction.channel.delete().catch(() => {}), 10000);
         return;
     }
 
-    // ❌ ОТКЛОН
     if (interaction.customId.startsWith('deny_')) {
 
         const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
 
-        await logChannel.send(
-            `❌ <@${interaction.user.id}> отклонил <@${userId}>`
-        );
+        await logChannel.send(`❌ <@${interaction.user.id}> отклонил <@${userId}>`);
 
         await interaction.reply('❌ Отклонён');
 
-        setTimeout(() => {
-            interaction.channel.delete().catch(() => {});
-        }, 10000);
-
+        setTimeout(() => interaction.channel.delete().catch(() => {}), 10000);
         return;
-    }
-}
-        // 📞 ОБЗВОН
-        if (interaction.customId.startsWith('call_')) {
-
-            await interaction.channel.send(
-                `📞 <@${userId}> Вас вызвали на обзвон, зайдите в любой войс`
-            );
-
-            return interaction.reply({
-                content: '📞 Вызов отправлен',
-                ephemeral: true
-            });
-        }
-
-        // 🧾 ВЗЯТЬ ЗАЯВКУ
-        if (interaction.customId.startsWith('take_')) {
-
-            if (!interaction.member.roles.cache.has(RECRUIT_ROLE)) {
-                return interaction.reply({
-                    content: '❌ Только для рекрутов',
-                    ephemeral: true
-                });
-            }
-
-            await interaction.channel.send(
-                `🧾 <@${interaction.user.id}> взял заявку`
-            );
-
-            return interaction.reply({
-                content: '✅ Ты взял заявку',
-                ephemeral: true
-            });
-        }
     }
 });
 
