@@ -24,18 +24,15 @@ const TOKEN = process.env.TOKEN;
 
 const CHANNEL_ID = '1493650682782285864';
 const LOG_CHANNEL_ID = '1470242269696233596';
+const RECRUITER_ROLE = '1493716953028624424';
 
-// роли
+// роли доступа в заявку
 const ROLES = [
-    '1493658504538624111',
-    '1493658601347223762',
-    '1493658647958392912',
-    '1493658676148306072'
+    '1493716953028624424',
 ];
 
 const ROLE_ACCEPT = '1493658902385131531';
 
-// счётчик
 const acceptedStats = {};
 
 // ---------- ПАНЕЛЬ ----------
@@ -46,25 +43,7 @@ client.once('ready', async () => {
 
     const embed = new EmbedBuilder()
         .setColor('#2b2d31')
-        .setDescription(`
-👋 **Путь в семью Kamatoz начинается здесь!**
-
-━━━━━━━━━━━━━━━━━━━
-
-📌 **Важно**  
-Прочитайте **ВСЕ ВОПРОСЫ**.  
-Если не ответили — **ЗАЯВКА ОТКЛОНЯЕТСЯ**.
-**ЗАЯВКИ В СЕМЬЮ ПРИНИМАЮТСЯ ТОЛЬКО НА СЕРВЕР Orlando (18)**
-• Исключительно 15+
-• Минимальная длина откатов с GG — от 5 минут.
-• Адекватность
-• Прайм тайм 4+ часа
-
-━━━━━━━━━━━━━━━━━━━
-
-📥 **Подача заявки**  
-Нажми кнопку ниже
-        `);
+        .setDescription(`👋 **Путь в семью Kamatoz начинается здесь!**`);
 
     const button = new ButtonBuilder()
         .setCustomId('apply')
@@ -165,7 +144,7 @@ client.on(Events.InteractionCreate, async interaction => {
             const rolesPing = ROLES.map(id => `<@&${id}>`).join(' ');
 
             await newChannel.send({
-                content: `${rolesPing}\n<@${interaction.user.id}>`,
+                content: `<@&${RECRUITER_ROLE}>\n${rolesPing}\n<@${interaction.user.id}>`,
                 embeds: [embed],
                 components: [row]
             });
@@ -182,12 +161,30 @@ client.on(Events.InteractionCreate, async interaction => {
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isButton()) return;
 
+    const member = interaction.member;
+
+    // 🚫 только рекрут
+    if (!member.roles.cache.has(RECRUITER_ROLE)) {
+        return interaction.reply({
+            content: '❌ У тебя нет доступа',
+            ephemeral: true
+        });
+    }
+
+    // 🚫 нельзя принять свою
+    const userId = interaction.customId.split('_')[1];
+    if (interaction.user.id === userId) {
+        return interaction.reply({
+            content: '❌ Нельзя принять свою заявку',
+            ephemeral: true
+        });
+    }
+
     // ПРИНЯТЬ
     if (interaction.customId.startsWith('accept_')) {
-        const userId = interaction.customId.split('_')[1];
-        const member = await interaction.guild.members.fetch(userId);
 
-        await member.roles.add(ROLE_ACCEPT);
+        const target = await interaction.guild.members.fetch(userId);
+        await target.roles.add(ROLE_ACCEPT);
 
         if (!acceptedStats[interaction.user.id]) {
             acceptedStats[interaction.user.id] = 0;
@@ -197,20 +194,19 @@ client.on(Events.InteractionCreate, async interaction => {
         const logChannel = await interaction.guild.channels.fetch(LOG_CHANNEL_ID);
 
         await logChannel.send({
-            content: `✅ Принят\n👤 Заявка: <@${userId}>\n🛠 Принял: <@${interaction.user.id}>\n📊 Всего принял: ${acceptedStats[interaction.user.id]}`
+            content: `✅ Принят\n👤 <@${userId}>\n🛠 <@${interaction.user.id}>\n📊 Всего: ${acceptedStats[interaction.user.id]}`
         });
 
         await interaction.reply('✅ Принят');
     }
 
-    // ОТКЛОНИТЬ
+    // ОТКЛОН
     if (interaction.customId.startsWith('deny_')) {
-        const userId = interaction.customId.split('_')[1];
 
         const logChannel = await interaction.guild.channels.fetch(LOG_CHANNEL_ID);
 
         await logChannel.send({
-            content: `❌ Отклонён\n👤 Заявка: <@${userId}>\n🛠 Отклонил: <@${interaction.user.id}>`
+            content: `❌ Отклонён\n👤 <@${userId}>\n🛠 <@${interaction.user.id}>`
         });
 
         await interaction.reply('❌ Отклонён');
