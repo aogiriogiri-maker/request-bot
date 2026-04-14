@@ -18,10 +18,9 @@ const client = new Client({
 
 const TOKEN = process.env.TOKEN;
 
-// 👉 ВСТАВЬ
 const CHANNEL_ID = '1493650682782285864';
 
-// роли (вставь ID ролей)
+// роли
 const ROLES = [
     '1493658504538624111',
     '1493658601347223762',
@@ -31,39 +30,32 @@ const ROLES = [
 
 const ROLE_ACCEPT = '1493658902385131531';
 
-// ---------- ПАНЕЛЬ АВТО ----------
+// ---------- ПАНЕЛЬ ----------
 client.once('ready', async () => {
     console.log('Бот запущен');
 
     const channel = await client.channels.fetch(CHANNEL_ID);
 
     const embed = new EmbedBuilder()
-    .setColor('#2b2d31')
-    .setImage('https://imgur.com/a/Etbe5xX') // ← сюда вставь лого Kamatoz
-
-    .setDescription(`
+        .setColor('#2b2d31')
+        .setImage('https://imgur.com/a/Etbe5xX') // ВСТАВЬ СВОЮ ССЫЛКУ
+        .setDescription(`
 👋 **Путь в семью Kamatoz начинается здесь!**
 
 ━━━━━━━━━━━━━━━━━━━
 
 📌 **Важно**  
-Внимательно прочитайте **ВСЕ ВОПРОСЫ** при подаче заявки.  
-Если не ответили на все вопросы — **ЗАЯВКА ОТКЛОНЯЕТСЯ**.
-
-**ЗАЯВКИ В СЕМЬЮ ПРИНИМАЮТСЯ ТОЛЬКО НА СЕРВЕР Orlando (18)
+Прочитайте **ВСЕ ВОПРОСЫ**.  
+Если не ответили — **ЗАЯВКА ОТКЛОНЯЕТСЯ**.
+**ЗАЯВКИ В СЕМЬЮ ПРИНИМАЮТСЯ ТОЛЬКО НА СЕРВЕР Orlando (18)**
 • Исключительно 15+
 • Минимальная длина откатов с GG — от 5 минут.
-━━━━━━━━━━━━━━━━━━━
-
-📜 **Дополнительные правила**
-・Откаты с GG — не более 1 недели назад  
-・Подавать заявку можно в любое время
 
 ━━━━━━━━━━━━━━━━━━━
 
 📥 **Подача заявки**  
 Нажми кнопку ниже
-    `);
+        `);
 
     const button = new ButtonBuilder()
         .setCustomId('apply')
@@ -90,19 +82,19 @@ client.on(Events.InteractionCreate, async interaction => {
 
         modal.addComponents(
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('name').setLabel('Имя').setStyle(1)
+                new TextInputBuilder().setCustomId('name').setLabel('Имя').setStyle(TextInputStyle.Short)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('age').setLabel('Возраст').setStyle(1)
+                new TextInputBuilder().setCustomId('age').setLabel('Возраст').setStyle(TextInputStyle.Short)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('nick').setLabel('Ник').setStyle(1)
+                new TextInputBuilder().setCustomId('nick').setLabel('Ник').setStyle(TextInputStyle.Short)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('history').setLabel('История').setStyle(2)
+                new TextInputBuilder().setCustomId('history').setLabel('История').setStyle(TextInputStyle.Paragraph)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('video').setLabel('Видео').setStyle(2)
+                new TextInputBuilder().setCustomId('video').setLabel('Видео').setStyle(TextInputStyle.Paragraph)
             )
         );
 
@@ -116,43 +108,31 @@ client.on(Events.InteractionCreate, async interaction => {
 
     if (interaction.customId === 'form') {
 
-        const channel = await client.channels.fetch(CHANNEL_ID);
-
         const category = interaction.channel.parent;
 
-const newChannel = await interaction.guild.channels.create({
-    name: `заявка-${interaction.user.username}`,
-    type: 0,
-    parent: category.id,
+        const newChannel = await interaction.guild.channels.create({
+            name: `заявка-${interaction.user.username}`,
+            type: ChannelType.GuildText,
+            parent: category.id,
 
-    permissionOverwrites: [
-        {
-            id: interaction.guild.id,
-            deny: ['ViewChannel'],
-        },
-        {
-            id: interaction.user.id,
-            allow: ['ViewChannel', 'SendMessages'],
-        },
-        ...ROLES.map(roleId => ({
-            id: roleId,
-            allow: ['ViewChannel', 'SendMessages']
-        }))
-    ]
-});
-            type: ChannelType.PublicThread
+            permissionOverwrites: [
+                {
+                    id: interaction.guild.id,
+                    deny: ['ViewChannel'],
+                },
+                {
+                    id: interaction.user.id,
+                    allow: ['ViewChannel', 'SendMessages'],
+                },
+                ...ROLES.map(roleId => ({
+                    id: roleId,
+                    allow: ['ViewChannel', 'SendMessages']
+                }))
+            ]
         });
 
-        // добавляем роли
-        for (let roleId of ROLES) {
-            const role = interaction.guild.roles.cache.get(roleId);
-            if (role) {
-                await thread.members.add(roleId).catch(() => {});
-            }
-        }
-
         const embed = new EmbedBuilder()
-            .setTitle('Новая заявка')
+            .setTitle('📥 Новая заявка')
             .addFields(
                 { name: 'Имя', value: interaction.fields.getTextInputValue('name') },
                 { name: 'Возраст', value: interaction.fields.getTextInputValue('age') },
@@ -173,7 +153,7 @@ const newChannel = await interaction.guild.channels.create({
 
         const row = new ActionRowBuilder().addComponents(accept, deny);
 
-        await thread.send({
+        await newChannel.send({
             content: `<@${interaction.user.id}>`,
             embeds: [embed],
             components: [row]
