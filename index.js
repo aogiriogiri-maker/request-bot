@@ -20,24 +20,14 @@ const TOKEN = process.env.TOKEN;
 
 const CHANNEL_ID = '1493650682782285864';
 
-// роли (кто видит заявки)
 const ROLES = [
-    '1493658504538624111',
-    '1493658601347223762',
-    '1493658647958392912',
-    '1493658676148306072'
+    '1493716953028624424',
 ];
 
-// роль при принятии
 const ROLE_ACCEPT = '1493658902385131531';
-
-// роль рекрут (кого тегать)
 const RECRUIT_ROLE = '1493716953028624424';
+const LOG_CHANNEL_ID = '1470242269696233596';
 
-// лог канал
-const LOG_CHANNEL_ID = 'ВСТАВЬ_ID_ЛОГ_КАНАЛА';
-
-// счетчик
 const stats = {};
 
 // ---------- ПАНЕЛЬ ----------
@@ -46,28 +36,27 @@ client.once('ready', async () => {
 
     const channel = await client.channels.fetch(CHANNEL_ID);
 
-        const embed = new EmbedBuilder()
+    const embed = new EmbedBuilder()
         .setColor('#2b2d31')
-        .setDescription(`👋 **Путь в семью Kamatoz начинается здесь!**
-        
-         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            
-         📌 Важно
-        Прочитайте ВСЕ ВОПРОСЫ.
-        Если не ответили — ЗАЯВКА ОТКЛОНЯЕТСЯ.
-        ЗАЯВКИ В СЕМЬЮ ПРИНИМАЮТСЯ ТОЛЬКО НА СЕРВЕР Orlando (18)
-        • Исключительно 15+
-        • Минимальная длина откатов с GG — от 5 минут.
-        • Адекватность
-        • Прайм тайм 4+ часа
-            
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            
-        📥 Подача заявки
-        Нажми кнопку ниже
-        
-        
-        
+        .setImage('https://i.imgur.com/Etbe5xX.png')
+        .setDescription(`
+👋 Путь в семью Kamatoz начинается здесь!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📌 Важно
+Прочитайте ВСЕ ВОПРОСЫ.
+Если не ответили — ЗАЯВКА ОТКЛОНЯЕТСЯ.
+ЗАЯВКИ В СЕМЬЮ ПРИНИМАЮТСЯ ТОЛЬКО НА СЕРВЕР Orlando (18)
+• Исключительно 15+
+• Минимальная длина откатов с GG — от 5 минут.
+• Адекватность
+• Прайм тайм 4+ часа
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📥 Подача заявки
+Нажми кнопку ниже
         `);
 
     const button = new ButtonBuilder()
@@ -83,11 +72,11 @@ client.once('ready', async () => {
     });
 });
 
-// ---------- КНОПКА ----------
+// ---------- ЕДИНЫЙ ОБРАБОТЧИК ----------
 client.on(Events.InteractionCreate, async interaction => {
-    if (!interaction.isButton()) return;
 
-    if (interaction.customId === 'apply') {
+    // ---------- КНОПКА ПОДАТЬ ----------
+    if (interaction.isButton() && interaction.customId === 'apply') {
 
         const modal = new ModalBuilder()
             .setCustomId('form')
@@ -111,129 +100,138 @@ client.on(Events.InteractionCreate, async interaction => {
             )
         );
 
-        await interaction.showModal(modal);
+        return interaction.showModal(modal);
     }
-});
 
-// ---------- ОТПРАВКА ----------
-client.on(Events.InteractionCreate, async interaction => {
-    if (!interaction.isModalSubmit()) return;
-    if (interaction.customId !== 'form') return;
+    // ---------- ОТПРАВКА ----------
+    if (interaction.isModalSubmit() && interaction.customId === 'form') {
 
-    try {
-        const panelChannel = await client.channels.fetch(CHANNEL_ID);
-        const category = panelChannel.parent;
+        try {
+            const panelChannel = await client.channels.fetch(CHANNEL_ID);
+            const category = panelChannel.parent;
 
-        const newChannel = await interaction.guild.channels.create({
-            name: `заявка-${interaction.user.username}`,
-            type: ChannelType.GuildText,
-            parent: category.id,
+            const newChannel = await interaction.guild.channels.create({
+                name: `заявка-${interaction.user.username}`,
+                type: ChannelType.GuildText,
+                parent: category.id,
 
-            permissionOverwrites: [
-                {
-                    id: interaction.guild.id,
-                    deny: ['ViewChannel'],
-                },
-                {
-                    id: interaction.user.id,
-                    allow: ['ViewChannel', 'SendMessages', 'ReadMessageHistory'],
-                },
-                ...ROLES.map(roleId => ({
-                    id: roleId,
-                    allow: ['ViewChannel', 'SendMessages', 'ReadMessageHistory']
-                }))
-            ]
-        });
+                permissionOverwrites: [
+                    {
+                        id: interaction.guild.id,
+                        deny: ['ViewChannel'],
+                    },
+                    {
+                        id: interaction.user.id,
+                        allow: ['ViewChannel', 'SendMessages', 'ReadMessageHistory'],
+                    },
+                    ...ROLES.map(roleId => ({
+                        id: roleId,
+                        allow: ['ViewChannel', 'SendMessages', 'ReadMessageHistory']
+                    }))
+                ]
+            });
 
-        const embed = new EmbedBuilder()
-            .setTitle('📥 Новая заявка')
-            .addFields(
-                { name: 'Имя', value: interaction.fields.getTextInputValue('name') },
-                { name: 'Возраст', value: interaction.fields.getTextInputValue('age') },
-                { name: 'Ник', value: interaction.fields.getTextInputValue('nick') },
-                { name: 'История', value: interaction.fields.getTextInputValue('history') },
-                { name: 'Видео', value: interaction.fields.getTextInputValue('video') }
+            const embed = new EmbedBuilder()
+                .setTitle('📥 Новая заявка')
+                .addFields(
+                    { name: 'Имя', value: interaction.fields.getTextInputValue('name') },
+                    { name: 'Возраст', value: interaction.fields.getTextInputValue('age') },
+                    { name: 'Ник', value: interaction.fields.getTextInputValue('nick') },
+                    { name: 'История', value: interaction.fields.getTextInputValue('history') },
+                    { name: 'Видео', value: interaction.fields.getTextInputValue('video') }
+                );
+
+            const accept = new ButtonBuilder()
+                .setCustomId(`accept_${interaction.user.id}`)
+                .setLabel('Принять')
+                .setStyle(ButtonStyle.Success);
+
+            const deny = new ButtonBuilder()
+                .setCustomId(`deny_${interaction.user.id}`)
+                .setLabel('Отклонить')
+                .setStyle(ButtonStyle.Danger);
+
+            const call = new ButtonBuilder()
+                .setCustomId(`call_${interaction.user.id}`)
+                .setLabel('Вызвать на обзвон')
+                .setStyle(ButtonStyle.Secondary);
+
+            const row = new ActionRowBuilder().addComponents(accept, deny, call);
+
+            await newChannel.send({
+                content: `<@&${RECRUIT_ROLE}> <@${interaction.user.id}>`,
+                embeds: [embed],
+                components: [row]
+            });
+
+            return interaction.reply({
+                content: '✅ Заявка отправлена!',
+                ephemeral: true
+            });
+
+        } catch (err) {
+            console.error(err);
+            return interaction.reply({
+                content: '❌ Ошибка при создании заявки',
+                ephemeral: true
+            });
+        }
+    }
+
+    // ---------- КНОПКИ ----------
+    if (interaction.isButton()) {
+
+        const userId = interaction.customId.split('_')[1];
+
+        // ❌ защита от самопринятия
+        if (interaction.user.id === userId) {
+            return interaction.reply({
+                content: '❌ Нельзя взаимодействовать со своей заявкой',
+                ephemeral: true
+            });
+        }
+
+        // ✅ ПРИНЯТЬ
+        if (interaction.customId.startsWith('accept_')) {
+
+            const member = await interaction.guild.members.fetch(userId);
+            await member.roles.add(ROLE_ACCEPT);
+
+            stats[interaction.user.id] = (stats[interaction.user.id] || 0) + 1;
+
+            const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
+
+            await logChannel.send(
+                `✅ <@${interaction.user.id}> принял <@${userId}> | Всего: ${stats[interaction.user.id]}`
             );
 
-        const accept = new ButtonBuilder()
-            .setCustomId(`accept_${interaction.user.id}`)
-            .setLabel('Принять')
-            .setStyle(ButtonStyle.Success);
+            return interaction.reply('✅ Принят');
+        }
 
-        const deny = new ButtonBuilder()
-            .setCustomId(`deny_${interaction.user.id}`)
-            .setLabel('Отклонить')
-            .setStyle(ButtonStyle.Danger);
+        // ❌ ОТКЛОНИТЬ
+        if (interaction.customId.startsWith('deny_')) {
 
-        const row = new ActionRowBuilder().addComponents(accept, deny);
+            const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
 
-        await newChannel.send({
-            content: `<@&${RECRUIT_ROLE}> <@${interaction.user.id}>`,
-            embeds: [embed],
-            components: [row]
-        });
+            await logChannel.send(
+                `❌ <@${interaction.user.id}> отклонил <@${userId}>`
+            );
 
-        await interaction.reply({
-            content: '✅ Заявка отправлена!',
-            ephemeral: true
-        });
+            return interaction.reply('❌ Отклонён');
+        }
 
-    } catch (err) {
-        console.error(err);
-        await interaction.reply({
-            content: '❌ Ошибка при создании заявки',
-            ephemeral: true
-        });
-    }
-});
+        // 📞 ВЫЗОВ НА ОБЗВОН
+        if (interaction.customId.startsWith('call_')) {
 
-// ---------- ПРИНЯТЬ / ОТКЛОНИТЬ ----------
-client.on(Events.InteractionCreate, async interaction => {
-    if (!interaction.isButton()) return;
+            await interaction.channel.send(
+                `📞 <@${userId}> Вас вызвали на обзвон, зайдите в любой войс`
+            );
 
-    if (interaction.customId.startsWith('accept_')) {
-        const userId = interaction.customId.split('_')[1];
-
-        // нельзя принять свою заявку
-        if (interaction.user.id === userId) {
             return interaction.reply({
-                content: '❌ Нельзя принять свою заявку',
+                content: '📞 Вызов отправлен',
                 ephemeral: true
             });
         }
-
-        const member = await interaction.guild.members.fetch(userId);
-        await member.roles.add(ROLE_ACCEPT);
-
-        // статистика
-        stats[interaction.user.id] = (stats[interaction.user.id] || 0) + 1;
-
-        const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
-
-        await logChannel.send(
-            `✅ <@${interaction.user.id}> принял <@${userId}> | Всего: ${stats[interaction.user.id]}`
-        );
-
-        await interaction.reply('✅ Принят');
-    }
-
-    if (interaction.customId.startsWith('deny_')) {
-        const userId = interaction.customId.split('_')[1];
-
-        if (interaction.user.id === userId) {
-            return interaction.reply({
-                content: '❌ Нельзя отклонить свою заявку',
-                ephemeral: true
-            });
-        }
-
-        const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
-
-        await logChannel.send(
-            `❌ <@${interaction.user.id}> отклонил <@${userId}>`
-        );
-
-        await interaction.reply('❌ Отклонён');
     }
 });
 
