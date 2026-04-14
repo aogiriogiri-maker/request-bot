@@ -31,6 +31,7 @@ const RECRUIT_ROLE = '1493715429963731075';
 const LOG_CHANNEL_ID = '1493716294531416085';
 
 const stats = {};
+const takenRequests = new Set();
 
 // ---------- ПАНЕЛЬ ----------
 client.once('ready', async () => {
@@ -50,6 +51,11 @@ client.once('ready', async () => {
 Прочитайте ВСЕ ВОПРОСЫ.
 Если не ответили — ЗАЯВКА ОТКЛОНЯЕТСЯ.
 ЗАЯВКИ только на сервер Orlando (18)
+Требования:
+Возраст - 15+
+Прайм тайм - 4+ (исключения)
+Базовая стрельба с тяжки + сайга
+Адекватность
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -72,7 +78,7 @@ client.once('ready', async () => {
 // ---------- ОБРАБОТЧИК ----------
 client.on(Events.InteractionCreate, async interaction => {
 
-    // ---------- КНОПКА ----------
+    // ---------- ПОДАТЬ ----------
     if (interaction.isButton() && interaction.customId === 'apply') {
 
         const modal = new ModalBuilder()
@@ -87,10 +93,10 @@ client.on(Events.InteractionCreate, async interaction => {
                 new TextInputBuilder().setCustomId('age').setLabel('Возраст').setStyle(TextInputStyle.Short)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('nick').setLabel('Игровой ник').setStyle(TextInputStyle.Short)
+                new TextInputBuilder().setCustomId('nick').setLabel('Ник').setStyle(TextInputStyle.Short)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('history').setLabel('История семей').setStyle(TextInputStyle.Paragraph)
+                new TextInputBuilder().setCustomId('history').setLabel('История').setStyle(TextInputStyle.Paragraph)
             ),
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder().setCustomId('video').setLabel('Видео').setStyle(TextInputStyle.Paragraph)
@@ -139,7 +145,7 @@ client.on(Events.InteractionCreate, async interaction => {
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId(`accept_${interaction.user.id}`).setLabel('Принять').setStyle(ButtonStyle.Success),
                 new ButtonBuilder().setCustomId(`deny_${interaction.user.id}`).setLabel('Отклонить').setStyle(ButtonStyle.Danger),
-                new ButtonBuilder().setCustomId(`call_${interaction.user.id}`).setLabel('Вызвать').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId(`call_${interaction.user.id}`).setLabel('Обзвон').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId(`take_${interaction.user.id}`).setLabel('Взять').setStyle(ButtonStyle.Primary)
             );
 
@@ -166,22 +172,45 @@ client.on(Events.InteractionCreate, async interaction => {
         return interaction.reply({ content: '❌ Нет доступа', ephemeral: true });
     }
 
+    // 🧾 ВЗЯТЬ
     if (interaction.customId.startsWith('take_')) {
 
         if (!interaction.member.roles.cache.has(RECRUIT_ROLE)) {
             return interaction.reply({ content: '❌ Только рекрут', ephemeral: true });
         }
 
+        if (takenRequests.has(interaction.channel.id)) {
+            return interaction.reply({ content: '❌ Уже взята', ephemeral: true });
+        }
+
+        takenRequests.add(interaction.channel.id);
+
+        // ❌ убрать всех рекрутов
+        for (let roleId of ROLES) {
+            await interaction.channel.permissionOverwrites.edit(roleId, {
+                ViewChannel: false
+            });
+        }
+
+        // ✅ оставить того кто взял
+        await interaction.channel.permissionOverwrites.edit(interaction.user.id, {
+            ViewChannel: true,
+            SendMessages: true,
+            ReadMessageHistory: true
+        });
+
         await interaction.channel.send(`🧾 <@${interaction.user.id}> взял заявку`);
-        return interaction.reply({ content: '✅ Взял', ephemeral: true });
+
+        return interaction.reply({ content: '✅ Ты взял заявку', ephemeral: true });
     }
 
+    // 📞 ОБЗВОН
     if (interaction.customId.startsWith('call_')) {
-
         await interaction.channel.send(`📞 <@${userId}> зайди в войс`);
         return interaction.reply({ content: '📞 Отправлено', ephemeral: true });
     }
 
+    // ✅ ПРИНЯТЬ
     if (interaction.customId.startsWith('accept_')) {
 
         const member = await interaction.guild.members.fetch(userId);
@@ -191,7 +220,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
         const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
 
-        await logChannel.send(`✅ <@${interaction.user.id}> принял <@${userId}> | ${stats[interaction.user.id]}`);
+        await logChannel.send(`✅ <@${interaction.user.id}> принял <@${userId}>`);
 
         await interaction.reply('✅ Принят');
 
@@ -199,6 +228,7 @@ client.on(Events.InteractionCreate, async interaction => {
         return;
     }
 
+    // ❌ ОТКЛОН
     if (interaction.customId.startsWith('deny_')) {
 
         const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
