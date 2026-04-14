@@ -50,6 +50,8 @@ client.once('ready', async () => {
 **ЗАЯВКИ В СЕМЬЮ ПРИНИМАЮТСЯ ТОЛЬКО НА СЕРВЕР Orlando (18)**
 • Исключительно 15+
 • Минимальная длина откатов с GG — от 5 минут.
+• Адекватность
+• Прайм тайм 4+ часа
 
 ━━━━━━━━━━━━━━━━━━━
 
@@ -108,7 +110,8 @@ client.on(Events.InteractionCreate, async interaction => {
 
     if (interaction.customId === 'form') {
 
-        const category = interaction.channel.parent;
+        const panelChannel = await client.channels.fetch(CHANNEL_ID);
+const category = panelChannel.parent;
 
         const newChannel = await interaction.guild.channels.create({
             name: `заявка-${interaction.user.username}`,
