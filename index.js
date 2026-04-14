@@ -87,19 +87,19 @@ client.on(Events.InteractionCreate, async interaction => {
 
         modal.addComponents(
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('name').setLabel('Имя').setStyle(TextInputStyle.Short)
+                new TextInputBuilder().setCustomId('name').setLabel('Имя ирл').setStyle(TextInputStyle.Short)
             ),
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder().setCustomId('age').setLabel('Возраст').setStyle(TextInputStyle.Short)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('nick').setLabel('Ник').setStyle(TextInputStyle.Short)
+                new TextInputBuilder().setCustomId('nick').setLabel('Ник игровой').setStyle(TextInputStyle.Short)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('history').setLabel('История').setStyle(TextInputStyle.Paragraph)
+                new TextInputBuilder().setCustomId('history').setLabel('История семей и почему ушел').setStyle(TextInputStyle.Paragraph)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('video').setLabel('Видео').setStyle(TextInputStyle.Paragraph)
+                new TextInputBuilder().setCustomId('video').setLabel('Откат с гг тяжка + сайга').setStyle(TextInputStyle.Paragraph)
             )
         );
 
@@ -220,7 +220,11 @@ client.on(Events.InteractionCreate, async interaction => {
 
         const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
 
-        await logChannel.send(`✅ <@${interaction.user.id}> принял <@${userId}>`);
+        stats[interaction.user.id] = (stats[interaction.user.id] || 0) + 1;
+
+await logChannel.send(
+    `✅ <@${interaction.user.id}> принял <@${userId}> | Всего принял: ${stats[interaction.user.id]}`
+);
 
         await interaction.reply('✅ Принят');
 
