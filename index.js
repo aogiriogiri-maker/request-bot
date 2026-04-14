@@ -23,7 +23,9 @@ const client = new Client({
 const TOKEN = process.env.TOKEN;
 
 const CHANNEL_ID = '1493650682782285864';
+const LOG_CHANNEL_ID = '1470242269696233596';
 
+// роли
 const ROLES = [
     '1493658504538624111',
     '1493658601347223762',
@@ -32,6 +34,9 @@ const ROLES = [
 ];
 
 const ROLE_ACCEPT = '1493658902385131531';
+
+// счётчик
+const acceptedStats = {};
 
 // ---------- ПАНЕЛЬ ----------
 client.once('ready', async () => {
@@ -79,6 +84,7 @@ client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isButton()) return;
 
     if (interaction.customId === 'apply') {
+
         const modal = new ModalBuilder()
             .setCustomId('form')
             .setTitle('Заявка');
@@ -156,8 +162,10 @@ client.on(Events.InteractionCreate, async interaction => {
 
             const row = new ActionRowBuilder().addComponents(accept, deny);
 
+            const rolesPing = ROLES.map(id => `<@&${id}>`).join(' ');
+
             await newChannel.send({
-                content: `<@${interaction.user.id}>`,
+                content: `${rolesPing}\n<@${interaction.user.id}>`,
                 embeds: [embed],
                 components: [row]
             });
@@ -174,16 +182,37 @@ client.on(Events.InteractionCreate, async interaction => {
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isButton()) return;
 
+    // ПРИНЯТЬ
     if (interaction.customId.startsWith('accept_')) {
         const userId = interaction.customId.split('_')[1];
         const member = await interaction.guild.members.fetch(userId);
 
         await member.roles.add(ROLE_ACCEPT);
 
+        if (!acceptedStats[interaction.user.id]) {
+            acceptedStats[interaction.user.id] = 0;
+        }
+        acceptedStats[interaction.user.id]++;
+
+        const logChannel = await interaction.guild.channels.fetch(LOG_CHANNEL_ID);
+
+        await logChannel.send({
+            content: `✅ Принят\n👤 Заявка: <@${userId}>\n🛠 Принял: <@${interaction.user.id}>\n📊 Всего принял: ${acceptedStats[interaction.user.id]}`
+        });
+
         await interaction.reply('✅ Принят');
     }
 
+    // ОТКЛОНИТЬ
     if (interaction.customId.startsWith('deny_')) {
+        const userId = interaction.customId.split('_')[1];
+
+        const logChannel = await interaction.guild.channels.fetch(LOG_CHANNEL_ID);
+
+        await logChannel.send({
+            content: `❌ Отклонён\n👤 Заявка: <@${userId}>\n🛠 Отклонил: <@${interaction.user.id}>`
+        });
+
         await interaction.reply('❌ Отклонён');
     }
 });
