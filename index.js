@@ -8,7 +8,10 @@ const {
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
-    Events
+    Events,
+    REST,
+    Routes,
+    SlashCommandBuilder
 } = require('discord.js');
 
 const client = new Client({
@@ -17,10 +20,9 @@ const client = new Client({
 
 const TOKEN = process.env.TOKEN;
 const CHANNEL_ID = '1493650682782285864';
+const CLIENT_ID = '1493652408432066660';
 
-// команда /panel
-const { REST, Routes, SlashCommandBuilder } = require('discord.js');
-
+// регистрация команды
 const commands = [
     new SlashCommandBuilder()
         .setName('panel')
@@ -32,7 +34,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 (async () => {
     try {
         await rest.put(
-            Routes.applicationCommands('1493652408432066660'),
+            Routes.applicationCommands(CLIENT_ID),
             { body: commands }
         );
         console.log('Команды зарегистрированы');
@@ -52,16 +54,10 @@ client.on(Events.InteractionCreate, async interaction => {
             .setTitle('Kamatoz Family')
             .setImage('ССЫЛКА_НА_ЛОГО')
             .setDescription(`
-👋 **Путь в семью начинается здесь!**
+👋 Путь в семью начинается здесь!
 
-📌 **Важно**
-Если не ответил на все вопросы — заявка отклоняется
-
-⏱ Рассмотрение: 1–2 дня
-
-📜 Правила:
-• Откаты не более 1 недели
-• Набор должен быть открыт
+📌 Заполни заявку ниже
+⏱ Рассмотрение: 1-2 дня
             `);
 
         const button = new ButtonBuilder()
@@ -78,7 +74,7 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 });
 
-// кнопка
+// форма
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isButton()) return;
 
@@ -88,52 +84,67 @@ client.on(Events.InteractionCreate, async interaction => {
             .setCustomId('application_modal')
             .setTitle('Заявка Kamatoz');
 
-        const name = new TextInputBuilder()
-            .setCustomId('name')
-            .setLabel('Ник')
-            .setStyle(TextInputStyle.Short);
-
-        const age = new TextInputBuilder()
-            .setCustomId('age')
-            .setLabel('Возраст')
-            .setStyle(TextInputStyle.Short);
-
-        const exp = new TextInputBuilder()
-            .setCustomId('exp')
-            .setLabel('Опыт')
-            .setStyle(TextInputStyle.Paragraph);
-
         modal.addComponents(
-            new ActionRowBuilder().addComponents(name),
-            new ActionRowBuilder().addComponents(age),
-            new ActionRowBuilder().addComponents(exp)
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('name')
+                    .setLabel('Имя')
+                    .setStyle(TextInputStyle.Short)
+            ),
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('age')
+                    .setLabel('Возраст')
+                    .setStyle(TextInputStyle.Short)
+            ),
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('nick')
+                    .setLabel('Игровой ник')
+                    .setStyle(TextInputStyle.Short)
+            ),
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('history')
+                    .setLabel('История семей')
+                    .setStyle(TextInputStyle.Paragraph)
+            ),
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('video')
+                    .setLabel('Видео (ганг/капты)')
+                    .setStyle(TextInputStyle.Paragraph)
+            )
         );
 
         await interaction.showModal(modal);
     }
 });
 
-// отправка заявки
+// отправка
 client.on(Events.InteractionCreate, async interaction => {
+    if (!interaction.isModalSubmit()) return;
+
     if (interaction.customId === 'application_modal') {
 
-    const embed = new EmbedBuilder()
-        .setTitle('Новая заявка Kamatoz')
-        .addFields(
-            { name: 'Имя', value: interaction.fields.getTextInputValue('name') },
-            { name: 'Возраст', value: interaction.fields.getTextInputValue('age') },
-            { name: 'Ник', value: interaction.fields.getTextInputValue('nick') },
-            { name: 'История семей', value: interaction.fields.getTextInputValue('history') },
-            { name: 'Видео ганга', value: interaction.fields.getTextInputValue('gang') }
-        );
+        const embed = new EmbedBuilder()
+            .setTitle('📥 Новая заявка Kamatoz')
+            .addFields(
+                { name: 'Имя', value: interaction.fields.getTextInputValue('name') },
+                { name: 'Возраст', value: interaction.fields.getTextInputValue('age') },
+                { name: 'Ник', value: interaction.fields.getTextInputValue('nick') },
+                { name: 'История', value: interaction.fields.getTextInputValue('history') },
+                { name: 'Видео', value: interaction.fields.getTextInputValue('video') }
+            );
 
-    const channel = await client.channels.fetch(CHANNEL_ID);
-    await channel.send({ embeds: [embed] });
+        const channel = await client.channels.fetch(CHANNEL_ID);
+        await channel.send({ embeds: [embed] });
 
-    await interaction.reply({
-        content: '✅ Заявка отправлена!',
-        ephemeral: true
-    });
-}
+        await interaction.reply({
+            content: '✅ Заявка отправлена!',
+            ephemeral: true
+        });
+    }
+});
 
 client.login(TOKEN);
