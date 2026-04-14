@@ -16,7 +16,7 @@ const client = new Client({
 });
 
 const TOKEN = process.env.TOKEN;
-const CHANNEL_ID = 'ВСТАВЬ_ID_КАНАЛА';
+const CHANNEL_ID = '1493650682782285864';
 
 // команда /panel
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
@@ -32,7 +32,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 (async () => {
     try {
         await rest.put(
-            Routes.applicationCommands('ТВОЙ_CLIENT_ID'),
+            Routes.applicationCommands('1493652408432066660'),
             { body: commands }
         );
         console.log('Команды зарегистрированы');
