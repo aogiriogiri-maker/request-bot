@@ -185,14 +185,12 @@ client.on(Events.InteractionCreate, async interaction => {
 
         takenRequests.add(interaction.channel.id);
 
-        // ❌ убрать всех рекрутов
         for (let roleId of ROLES) {
             await interaction.channel.permissionOverwrites.edit(roleId, {
                 ViewChannel: false
             });
         }
 
-        // ✅ оставить того кто взял
         await interaction.channel.permissionOverwrites.edit(interaction.user.id, {
             ViewChannel: true,
             SendMessages: true,
@@ -210,25 +208,27 @@ client.on(Events.InteractionCreate, async interaction => {
         return interaction.reply({ content: '📞 Отправлено', ephemeral: true });
     }
 
-    // ✅ ПРИНЯТЬ
+    // ✅ ПРИНЯТЬ (ФИКС Х2)
     if (interaction.customId.startsWith('accept_')) {
 
         const member = await interaction.guild.members.fetch(userId);
         await member.roles.add(ROLE_ACCEPT);
 
+        // ✅ ОДИН РАЗ
         stats[interaction.user.id] = (stats[interaction.user.id] || 0) + 1;
 
         const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
 
-        stats[interaction.user.id] = (stats[interaction.user.id] || 0) + 1;
-
-await logChannel.send(
-    `✅ <@${interaction.user.id}> принял <@${userId}> | Всего принял: ${stats[interaction.user.id]}`
-);
+        await logChannel.send(
+            `✅ <@${interaction.user.id}> принял <@${userId}> | Всего принял: ${stats[interaction.user.id]}`
+        );
 
         await interaction.reply('✅ Принят');
 
-        setTimeout(() => interaction.channel.delete().catch(() => {}), 10000);
+        setTimeout(() => {
+            interaction.channel.delete().catch(() => {});
+        }, 10000);
+
         return;
     }
 
@@ -241,7 +241,10 @@ await logChannel.send(
 
         await interaction.reply('❌ Отклонён');
 
-        setTimeout(() => interaction.channel.delete().catch(() => {}), 10000);
+        setTimeout(() => {
+            interaction.channel.delete().catch(() => {});
+        }, 10000);
+
         return;
     }
 });
