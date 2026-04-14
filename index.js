@@ -185,54 +185,90 @@ client.on(Events.InteractionCreate, async interaction => {
     // ---------- КНОПКИ ----------
     if (interaction.isButton()) {
 
-        const userId = interaction.customId.split('_')[1];
+    const userId = interaction.customId.split('_')[1];
 
-        // ❌ нельзя свою заявку
-        if (interaction.user.id === userId) {
+    // ❌ нельзя свою заявку
+    if (interaction.user.id === userId) {
+        return interaction.reply({
+            content: '❌ Нет доступа',
+            ephemeral: true
+        });
+    }
+
+    // 🧾 ВЗЯТЬ
+    if (interaction.customId.startsWith('take_')) {
+
+        if (!interaction.member.roles.cache.has(RECRUIT_ROLE)) {
             return interaction.reply({
-                content: '❌ Нельзя свою заявку',
+                content: '❌ Только для рекрутов',
                 ephemeral: true
             });
         }
 
-        // ✅ ПРИНЯТЬ
-        if (interaction.customId.startsWith('accept_')) {
+        await interaction.channel.send(
+            `🧾 <@${interaction.user.id}> взял заявку`
+        );
 
-            const member = await interaction.guild.members.fetch(userId);
-            await member.roles.add(ROLE_ACCEPT);
+        return interaction.reply({
+            content: '✅ Ты взял заявку',
+            ephemeral: true
+        });
+    }
 
-            stats[interaction.user.id] = (stats[interaction.user.id] || 0) + 1;
+    // 📞 ОБЗВОН
+    if (interaction.customId.startsWith('call_')) {
 
-            const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
+        await interaction.channel.send(
+            `📞 <@${userId}> Вас вызвали на обзвон, зайдите в любой войс`
+        );
 
-            await logChannel.send(
-                `✅ <@${interaction.user.id}> принял <@${userId}> | Всего: ${stats[interaction.user.id]}`
-            );
+        return interaction.reply({
+            content: '📞 Вызов отправлен',
+            ephemeral: true
+        });
+    }
 
-            await interaction.reply('✅ Принят');
+    // ✅ ПРИНЯТЬ
+    if (interaction.customId.startsWith('accept_')) {
 
-            // автоудаление
-            setTimeout(() => {
-                interaction.channel.delete().catch(() => {});
-            }, 10000);
-        }
+        const member = await interaction.guild.members.fetch(userId);
+        await member.roles.add(ROLE_ACCEPT);
 
-        // ❌ ОТКЛОНИТЬ
-        if (interaction.customId.startsWith('deny_')) {
+        stats[interaction.user.id] = (stats[interaction.user.id] || 0) + 1;
 
-            const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
+        const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
 
-            await logChannel.send(
-                `❌ <@${interaction.user.id}> отклонил <@${userId}>`
-            );
+        await logChannel.send(
+            `✅ <@${interaction.user.id}> принял <@${userId}> | Всего: ${stats[interaction.user.id]}`
+        );
 
-            await interaction.reply('❌ Отклонён');
+        await interaction.reply('✅ Принят');
 
-            setTimeout(() => {
-                interaction.channel.delete().catch(() => {});
-            }, 10000);
-        }
+        setTimeout(() => {
+            interaction.channel.delete().catch(() => {});
+        }, 10000);
 
+        return;
+    }
+
+    // ❌ ОТКЛОН
+    if (interaction.customId.startsWith('deny_')) {
+
+        const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
+
+        await logChannel.send(
+            `❌ <@${interaction.user.id}> отклонил <@${userId}>`
+        );
+
+        await interaction.reply('❌ Отклонён');
+
+        setTimeout(() => {
+            interaction.channel.delete().catch(() => {});
+        }, 10000);
+
+        return;
+    }
+}
         // 📞 ОБЗВОН
         if (interaction.customId.startsWith('call_')) {
 
