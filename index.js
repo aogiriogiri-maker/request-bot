@@ -13,14 +13,17 @@ const {
 } = require('discord.js');
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages
+    ]
 });
 
 const TOKEN = process.env.TOKEN;
 
 const CHANNEL_ID = '1493650682782285864';
 
-// роли
 const ROLES = [
     '1493658504538624111',
     '1493658601347223762',
@@ -38,8 +41,6 @@ client.once('ready', async () => {
 
     const embed = new EmbedBuilder()
         .setColor('#2b2d31')
-        // ❌ убрал краш:
-        // .setImage('https://imgur.com/a/Etbe5xX')
         .setDescription(`
 👋 **Путь в семью Kamatoz начинается здесь!**
 
@@ -78,7 +79,6 @@ client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isButton()) return;
 
     if (interaction.customId === 'apply') {
-
         const modal = new ModalBuilder()
             .setCustomId('form')
             .setTitle('Заявка');
@@ -114,13 +114,9 @@ client.on(Events.InteractionCreate, async interaction => {
         await interaction.deferReply({ ephemeral: true });
 
         try {
-            const panelChannel = await client.channels.fetch(CHANNEL_ID);
-            const category = panelChannel.parentId;
-
             const newChannel = await interaction.guild.channels.create({
                 name: `заявка-${interaction.user.username}`,
                 type: ChannelType.GuildText,
-                parent: category || null, // ✅ фикс
 
                 permissionOverwrites: [
                     {
@@ -169,7 +165,7 @@ client.on(Events.InteractionCreate, async interaction => {
             await interaction.editReply('✅ Заявка отправлена!');
         } catch (err) {
             console.error(err);
-            await interaction.editReply('❌ Ошибка при создании заявки');
+            await interaction.editReply(`❌ Ошибка: ${err.message}`);
         }
     }
 });
