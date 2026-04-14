@@ -38,7 +38,7 @@ client.once('ready', async () => {
 
     const embed = new EmbedBuilder()
         .setColor('#2b2d31')
-        .setImage('https://i.imgur.com/Etbe5xX.png')
+        .setImage('https://i.imgur.com/JkO2Vvi.png')
         .setDescription(`
 👋 Путь в семью Kamatoz начинается здесь!
 
