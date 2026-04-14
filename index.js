@@ -38,7 +38,7 @@ client.once('ready', async () => {
 
     const embed = new EmbedBuilder()
         .setColor('#2b2d31')
-        .setImage('https://i.imgur.com/JkO2Vvi.png')
+        .setImage('https://i.imgur.com/Etbe5xX.png')
         .setDescription(`
 👋 Путь в семью Kamatoz начинается здесь!
 
@@ -47,16 +47,11 @@ client.once('ready', async () => {
 📌 Важно
 Прочитайте ВСЕ ВОПРОСЫ.
 Если не ответили — ЗАЯВКА ОТКЛОНЯЕТСЯ.
-ЗАЯВКИ В СЕМЬЮ ПРИНИМАЮТСЯ ТОЛЬКО НА СЕРВЕР Orlando (18)
-• Исключительно 15+
-• Минимальная длина откатов с GG — от 5 минут.
-• Адекватность
-• Прайм тайм 4+ часа
+ЗАЯВКИ только на сервер Orlando (18)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📥 Подача заявки
-Нажми кнопку ниже
+📥 Нажми кнопку ниже
         `);
 
     const button = new ButtonBuilder()
@@ -72,10 +67,10 @@ client.once('ready', async () => {
     });
 });
 
-// ---------- ЕДИНЫЙ ОБРАБОТЧИК ----------
+// ---------- ОБРАБОТЧИК ----------
 client.on(Events.InteractionCreate, async interaction => {
 
-    // ---------- КНОПКА ПОДАТЬ ----------
+    // ---------- КНОПКА ----------
     if (interaction.isButton() && interaction.customId === 'apply') {
 
         const modal = new ModalBuilder()
@@ -90,22 +85,21 @@ client.on(Events.InteractionCreate, async interaction => {
                 new TextInputBuilder().setCustomId('age').setLabel('Возраст').setStyle(TextInputStyle.Short)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('nick').setLabel('Ник').setStyle(TextInputStyle.Short)
+                new TextInputBuilder().setCustomId('nick').setLabel('Игровой ник').setStyle(TextInputStyle.Short)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('history').setLabel('История').setStyle(TextInputStyle.Paragraph)
+                new TextInputBuilder().setCustomId('history').setLabel('История семей и почему ушел').setStyle(TextInputStyle.Paragraph)
             ),
             new ActionRowBuilder().addComponents(
-                new TextInputBuilder().setCustomId('video').setLabel('Видео').setStyle(TextInputStyle.Paragraph)
+                new TextInputBuilder().setCustomId('video').setLabel('Откаты с гг спеш+сайга').setStyle(TextInputStyle.Paragraph)
             )
         );
 
         return interaction.showModal(modal);
     }
 
-    // ---------- ОТПРАВКА ----------
+    // ---------- СОЗДАНИЕ ЗАЯВКИ ----------
     if (interaction.isModalSubmit() && interaction.customId === 'form') {
-
         try {
             const panelChannel = await client.channels.fetch(CHANNEL_ID);
             const category = panelChannel.parent;
@@ -114,7 +108,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 name: `заявка-${interaction.user.username}`,
                 type: ChannelType.GuildText,
                 parent: category.id,
-
                 permissionOverwrites: [
                     {
                         id: interaction.guild.id,
@@ -156,7 +149,12 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setLabel('Вызвать на обзвон')
                 .setStyle(ButtonStyle.Secondary);
 
-            const row = new ActionRowBuilder().addComponents(accept, deny, call);
+            const take = new ButtonBuilder()
+                .setCustomId(`take_${interaction.user.id}`)
+                .setLabel('Взять заявку')
+                .setStyle(ButtonStyle.Primary);
+
+            const row = new ActionRowBuilder().addComponents(accept, deny, call, take);
 
             await newChannel.send({
                 content: `<@&${RECRUIT_ROLE}> <@${interaction.user.id}>`,
@@ -183,10 +181,10 @@ client.on(Events.InteractionCreate, async interaction => {
 
         const userId = interaction.customId.split('_')[1];
 
-        // ❌ защита от самопринятия
+        // ❌ нельзя свою заявку
         if (interaction.user.id === userId) {
             return interaction.reply({
-                content: '❌ Нельзя взаимодействовать со своей заявкой',
+                content: '❌ Нельзя свою заявку',
                 ephemeral: true
             });
         }
@@ -205,7 +203,12 @@ client.on(Events.InteractionCreate, async interaction => {
                 `✅ <@${interaction.user.id}> принял <@${userId}> | Всего: ${stats[interaction.user.id]}`
             );
 
-            return interaction.reply('✅ Принят');
+            await interaction.reply('✅ Принят');
+
+            // автоудаление
+            setTimeout(() => {
+                interaction.channel.delete().catch(() => {});
+            }, 10000);
         }
 
         // ❌ ОТКЛОНИТЬ
@@ -217,10 +220,14 @@ client.on(Events.InteractionCreate, async interaction => {
                 `❌ <@${interaction.user.id}> отклонил <@${userId}>`
             );
 
-            return interaction.reply('❌ Отклонён');
+            await interaction.reply('❌ Отклонён');
+
+            setTimeout(() => {
+                interaction.channel.delete().catch(() => {});
+            }, 10000);
         }
 
-        // 📞 ВЫЗОВ НА ОБЗВОН
+        // 📞 ОБЗВОН
         if (interaction.customId.startsWith('call_')) {
 
             await interaction.channel.send(
@@ -229,6 +236,26 @@ client.on(Events.InteractionCreate, async interaction => {
 
             return interaction.reply({
                 content: '📞 Вызов отправлен',
+                ephemeral: true
+            });
+        }
+
+        // 🧾 ВЗЯТЬ ЗАЯВКУ
+        if (interaction.customId.startsWith('take_')) {
+
+            if (!interaction.member.roles.cache.has(RECRUIT_ROLE)) {
+                return interaction.reply({
+                    content: '❌ Только для рекрутов',
+                    ephemeral: true
+                });
+            }
+
+            await interaction.channel.send(
+                `🧾 <@${interaction.user.id}> взял заявку`
+            );
+
+            return interaction.reply({
+                content: '✅ Ты взял заявку',
                 ephemeral: true
             });
         }
