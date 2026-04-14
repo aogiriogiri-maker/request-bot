@@ -29,7 +29,7 @@ const ROLES = [
     '1493658676148306072'
 ];
 
-const ROLE_ACCEPT = 'ID_ПЫЛЬ';
+const ROLE_ACCEPT = '1493658902385131531';
 
 // ---------- ПАНЕЛЬ АВТО ----------
 client.once('ready', async () => {
